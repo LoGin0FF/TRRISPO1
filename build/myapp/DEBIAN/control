@@ -1,0 +1,10 @@
+Package: myapp
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.31)
+Build-Depends: golang (>= 1.11)
+Maintainer: Your Name <email@example.com>
+Description: Программа на Go, которая находит самые длинные слова в тексте.
+ Это приложение анализирует входной текст и находит самые длинные слова.

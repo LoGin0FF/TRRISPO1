@@ -1,0 +1,32 @@
+image: debian:latest
+
+before_script:
+  - go version  # Проверяем установленную версию Go
+
+
+stages:
+  - RunTest
+  - RunMake
+  - RunPackage
+
+RunTest:
+  stage: RunTest
+  script:
+    - make test
+
+RunMake:
+  stage: RunMake
+  script:
+    - make build
+  needs:
+    - RunTest  # Указываем, что `RunMake` зависит от `RunTest`
+
+RunPackage:
+  stage: RunPackage
+  script:
+    - make package
+  needs:
+    - RunMake  # Указываем, что `RunPackage` зависит от `RunMake`
+  artifacts:
+    paths:
+      - build/*.deb

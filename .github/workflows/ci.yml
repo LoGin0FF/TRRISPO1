@@ -1,0 +1,122 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: |
+          docker build --target builder -t myapp:builder .
+          docker save -o myapp-builder.tar myapp:builder
+
+      - name: Upload Docker Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapp-builder
+          path: myapp-builder.tar
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: myapp-builder
+
+      - name: Load Docker Image
+        run: |
+          docker load -i myapp-builder.tar
+
+      - name: Run Tests in Docker
+        run: |
+          docker run --rm myapp:builder make test
+
+  package:
+    name: Create Deb Package
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: myapp-builder
+
+      - name: Load Docker Image
+        run: |
+          docker load -i myapp-builder.tar
+
+      - name: Build Deb Package in Docker
+        run: |
+          docker build --target packager -t myapp:packager .
+          docker create --name extract myapp:packager
+          docker cp extract:/app/debian/myapp.deb myapp.deb
+          docker rm extract
+
+      - name: Upload Deb Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: myapp-deb
+          path: myapp.deb
+
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: package
+    steps:
+      - name: Download Deb Package
+        uses: actions/download-artifact@v4
+        with:
+          name: myapp-deb
+
+      - name: Install and Verify Package
+        run: |
+          sudo dpkg -i myapp.deb
+          myapp --version
+
+  push-docker:
+    name: Push Docker Image
+    runs-on: ubuntu-latest
+    needs: package
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: myapp-builder
+
+      - name: Load Docker Image
+        run: |
+          docker load -i myapp-builder.tar
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Tag and Push Docker Image
+        run: |
+          docker tag myapp:builder ${{ secrets.DOCKERHUB_USERNAME }}/myapp:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/myapp:latest
