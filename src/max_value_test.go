@@ -1,7 +1,7 @@
 package main
 
 import (
-	"testing"
+	"testing" //
 )
 
 func TestFindMaxValue(t *testing.T) {
@@ -61,8 +61,8 @@ func TestFindMaxValuePanic(t *testing.T) {
 // Тест производительности
 func BenchmarkFindMaxValue(b *testing.B) {
 	numbers := []int{5, 2, 9, 1, 7, 6, 3, 8, 4, 10, 15, 20, 25, 30, 35, 40, 45, 50}
-	
+
 	for i := 0; i < b.N; i++ {
 		findMaxValue(numbers)
 	}
-} 
+}
